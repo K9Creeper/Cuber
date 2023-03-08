@@ -4,6 +4,9 @@
 #include <vector>
 #include <functional>
 #include <thread>
+#include <d3d9.h>
+#include <d3dx9.h>
+#include <dwmapi.h>
 
 struct Vector3 {
     float x, y, z;
@@ -159,11 +162,7 @@ public:
 Vector2 CalcAngle(Vector3 pos, Vector3 dst)
 {
     float turnX = static_cast<float>(atan((pos.x - dst.x) / (pos.y - dst.y)) * (180 / 3.14159f));
-    float turnY = static_cast<float>(atan((pos.z - dst.z) / sqrt(pow(pos.y - dst.y, 2) + pow(pos.x - dst.x, 2))) * (180 / 3.14159f));
-
-    if (pos.z > dst.z)
-        turnY = -(turnY);
-
+    float turnY = static_cast<float>(-atan((pos.z - dst.z) / sqrt(pow(pos.y - dst.y, 2) + pow(pos.x - dst.x, 2))) * (180 / 3.14159f));
     turnX = 360 - turnX;
 
     /*Flip*/
@@ -226,14 +225,16 @@ void Hack_Thread()
 {
     while (global::THREAD_ON)
     {
+        Player_Inti();
         std::vector<Entity*>* List = Entity_List();
         for (Entity* Ent : *List)
         {
             if (Ent->place_number == global::selected)
             {
                 /*   Aim Bot   */
-                if (global::AimBot && Ent->Health != 0)
+                if (global::AimBot && Ent->Health != 0 && global::player->Health > 0)
                 {
+                    if(!(global::player->Position.x == Ent->Position.x && global::player->Position.y == Ent->Position.y && global::player->Position.z == Ent->Position.z))
                     Write<Vector2>(global::player_p + 0x40, Ent->AngleToAimbot);
                 }
                 /*           */
@@ -252,11 +253,16 @@ void Thread()
     AllocConsole();
     SetWindowText(GetConsoleWindow(), L"Debug");
     freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    int width = Read<int>(global::client + 0x110C94); //Gets res
+    int height = Read<int>(global::client + 0x110C98);
+    /*SET UP OVERLAY*/
+   
+    /*              */    
     std::thread Controls(Thread_Control);
     std::thread Hax(Hack_Thread);
     while (global::THREAD_ON)
     {
-        Player_Inti();
+        
         std::cout << "Player:\n\t"<<global::player->Name<<"\n\t\tStatus:\n\t\t\tHealth: " << global::player->Health << " / 100\n\t\t\tArmour: " << global::player->Armour << "\n\t\t\tTeam #: " << global::player->Team_Number << "\n\t\t\tPosition:  X: " << global::player->Position.x << ", Y: " << global::player->Position.y << ", Z: " << global::player->Position.z << "\n\t\tWeapon (equipped):\n\t\t\tName: " << global::player->Equipped.weapon_name << "\n\t\t\tAmmo: " << global::player->Equipped.weapon_ammo.loaded << " / " << global::player->Equipped.weapon_ammo.inv << "\n" << std::endl;
         global::player_count = Read<int>(global::client + 0x10F500 );
         std::vector<Entity*>* List =  Entity_List();
