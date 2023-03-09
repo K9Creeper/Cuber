@@ -1,84 +1,16 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
 #include <iostream>
-#include <vector>
+
 #include <functional>
 #include <thread>
-#include <d3d9.h>
-#include <d3dx9.h>
-#include <dwmapi.h>
+#include "Graphics.h"
 
-struct Vector3 {
-    float x, y, z;
-    //x : 0x34 
-    //y: 0x38
-    // z : 0x3C
-};
-struct View_Matrix
-{
-    float matrix[16];
-};
-
-struct ammo {
-    int loaded/*14*/, inv/*10*/;
-};
-struct Weapon //0x374
-{
-    char weapon_name[16]/*0x0C*/;
-    ammo weapon_ammo;
-};
-struct Vector2 {
-    float x, y;
-};
-class Entity {
-public:
-    char Name[16];//0x225
-    int Team_Number /*0x32C*/, Health/*0xf8*/, Armour /*0xFC*/, place_number;
-    Vector3 Position;
-    
-    Vector2 AngleToAimbot;
-    Weapon Equipped;
-};
-
-class Player {
-public:
-    char Name[16];//0x225
-    int Team_Number /*0x32C*/, Health/*0xf8*/, Armour /*0xFC*/;
-    char Last_Target[16];//0x101C38
-    View_Matrix view_matrix;//0x501AE8
-    Vector2 view_angles;
-    Vector3 Position;
-    Weapon Equipped;
-};
-
-namespace global {
-    static auto ac_client = L"ac_client.exe";
-    std::thread Main;
-    bool THREAD_ON = true;
-    int player_count;//0x10F500
-    int selected = 1;
-    bool AimBot;
-    bool Show_Info = true;
-    DWORD client;
-    DWORD entity_list;//0x10f4f8
-    DWORD player_p; //0x109B74
-    Player* player = new Player();
-};
-
-template <typename T>
-T Read(DWORD addressToRead)
-{
-    return *(T*)addressToRead;
+Vector2 GetWindowPos(HWND hwnd) {
+    RECT rect = { NULL };
+    if (GetWindowRect(hwnd, &rect))
+        return { static_cast<float>(rect.left), static_cast<float>(rect.top) };
 }
-
-template <typename T> /* https://stackoverflow.com/questions/23555730/reading-and-writing-with-a-dll-injection-c */
-void Write(DWORD addressToWrite, T value)
-{
-    T* ptr = (T*)addressToWrite;
-    *ptr = value;
-    //CANNOT FREE THE POINTER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-}
-
 Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix) {
     Vector3 out;
     float _x = matrix.matrix[0] * pos.x + matrix.matrix[1] * pos.y + matrix.matrix[2] * pos.z + matrix.matrix[3];
@@ -138,7 +70,6 @@ std::vector<Entity*>* Entity_List()
         List->push_back(Entity_Inti(Read<DWORD>(global::entity_list + (i * 4)), i));
     return List;
  }
-
 class Entity_Specific {
 public:
     bool Get_Pos_Of_S_Ent(int p, Vector3* Pos)
@@ -225,6 +156,10 @@ void Hack_Thread()
 {
     while (global::THREAD_ON)
     {
+        global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
+        global::Game.position = GetWindowPos(global::Game.hwnd);  
+        global::player_count = Read<int>(global::client + 0x10F500);
+        margin = { 0, 0, static_cast<int>(global::Game.size.x), static_cast<int>(global::Game.size.y) };
         Player_Inti();
         std::vector<Entity*>* List = Entity_List();
         for (Entity* Ent : *List)
@@ -245,6 +180,7 @@ void Hack_Thread()
         Sleep(1);
     }
 }
+DWORD WINAPI ThreadProc();
 void Thread()
 {
     global::client = (DWORD)GetModuleHandle(global::ac_client);
@@ -253,10 +189,13 @@ void Thread()
     AllocConsole();
     SetWindowText(GetConsoleWindow(), L"Debug");
     freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-    int width = Read<int>(global::client + 0x110C94); //Gets res
-    int height = Read<int>(global::client + 0x110C98);
+    /*GAME HWND STUFF*/
+    global::Game.hwnd = FindWindow(NULL, L"AssaultCube");
+    global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
+    global::Game.position = GetWindowPos(global::Game.hwnd);
+    /*               */
     /*SET UP OVERLAY*/
-   
+    std::thread overlay(ThreadProc);
     /*              */    
     std::thread Controls(Thread_Control);
     std::thread Hax(Hack_Thread);
@@ -264,7 +203,7 @@ void Thread()
     {
         
         std::cout << "Player:\n\t"<<global::player->Name<<"\n\t\tStatus:\n\t\t\tHealth: " << global::player->Health << " / 100\n\t\t\tArmour: " << global::player->Armour << "\n\t\t\tTeam #: " << global::player->Team_Number << "\n\t\t\tPosition:  X: " << global::player->Position.x << ", Y: " << global::player->Position.y << ", Z: " << global::player->Position.z << "\n\t\tWeapon (equipped):\n\t\t\tName: " << global::player->Equipped.weapon_name << "\n\t\t\tAmmo: " << global::player->Equipped.weapon_ammo.loaded << " / " << global::player->Equipped.weapon_ammo.inv << "\n" << std::endl;
-        global::player_count = Read<int>(global::client + 0x10F500 );
+        
         std::vector<Entity*>* List =  Entity_List();
         for (Entity* Ent : *List)
         {
@@ -281,6 +220,7 @@ void Thread()
     }
     Controls.join();
     Hax.join();
+    overlay.join();
     delete global::player;
 }
 
@@ -291,6 +231,9 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call,LPVOID lpReser
     case DLL_PROCESS_ATTACH:
         
         global::Main = std::thread(Thread);
+        global::inj_hModule = hModule;
+        
+
         break;
     case DLL_THREAD_ATTACH:
         break;
@@ -302,4 +245,79 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call,LPVOID lpReser
         break;
     }
     return TRUE;
+}
+
+LRESULT CALLBACK DLLWindowProc(HWND, UINT, WPARAM, LPARAM);
+BOOL RegisterDLLWindowClass()
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = DLLWindowProc;
+    wc.hInstance = global::inj_hModule;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)RGB(0, 0, 0);
+    wc.lpszClassName = L"WindowClass";
+
+    if (!RegisterClassEx(&wc))
+        return 0;
+}
+DWORD WINAPI ThreadProc() {
+    MSG msg;
+    RegisterDLLWindowClass();
+    global::overlay = CreateWindowEx(0,
+        L"WindowClass",
+        L"",
+        WS_EX_TOPMOST | WS_POPUP,
+        global::Game.position.x, global::Game.position.y,
+        global::Game.size.x, global::Game.size.y,
+        NULL,
+        NULL,
+        global::inj_hModule,
+        NULL);
+    SetWindowLong(global::overlay, GWL_EXSTYLE, (int)GetWindowLong(global::overlay, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT);
+    SetLayeredWindowAttributes(global::overlay, RGB(0, 0, 0), 0, ULW_COLORKEY);
+    SetLayeredWindowAttributes(global::overlay, 0, 255, LWA_ALPHA);
+    initD3D();
+    ShowWindow(global::overlay, SW_SHOWNORMAL);
+    
+    while (global::THREAD_ON)
+    {
+        
+        ::SetWindowPos(global::overlay, HWND_NOTOPMOST, global::Game.position.x, global::Game.position.y, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        
+        RENDER();
+        
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    if (msg.message == WM_QUIT)
+    {
+        global::THREAD_ON = false;
+        pFont->Release();
+        Arrow->Release();
+        d3d->Release();
+        d3ddev->Release();
+    }
+    return 1;
+
+}
+LRESULT CALLBACK DLLWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_PAINT:
+        DwmExtendFrameIntoClientArea(global::overlay, &margin);
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProc(hwnd, message, wParam, lParam);
+    }
+    return 0;
 }
