@@ -22,6 +22,9 @@ struct Vector3 {
 struct Vector2 {
     float x, y;
 };
+struct Vector4 {
+    float x, y, z, w;
+};
 struct View_Matrix
 {
     float matrix[16];
@@ -42,7 +45,6 @@ struct Game_Window {
     Vector2 position;
     Vector2 size;
 };
-
 class Entity {
 public:
     char Name[16];//0x225
@@ -52,7 +54,6 @@ public:
     Vector2 AngleToAimbot;
     Weapon Equipped;
 };
-
 class Player {
 public:
     char Name[16];//0x225
@@ -63,10 +64,12 @@ public:
     Vector3 Position;
     Weapon Equipped;
 };
+
 namespace global {
     static auto ac_client = L"ac_client.exe";
     std::thread Main;
     bool THREAD_ON = true;
+    bool Debug = true;
 
     HINSTANCE  inj_hModule;
     Game_Window Game;
@@ -75,6 +78,7 @@ namespace global {
     int player_count;//0x10F500
     int selected = 1;
     bool AimBot;
+    bool Esp;
     bool Show_Info = true;
 
     DWORD client;

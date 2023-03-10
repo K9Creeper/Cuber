@@ -34,7 +34,6 @@ void initD3D()
 		D3DCREATE_SOFTWARE_VERTEXPROCESSING,
 		&d3dpp,
 		&d3ddev);
-	D3DXCreateFont(d3ddev, 20, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial", &pFont);
 	D3DXCreateFont(d3ddev, 16, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Ariall", &Arrow);
 }
 void DrawFilledBox(int x, int y, int w, int h, DWORD color)
@@ -52,8 +51,13 @@ void DrawLinedBox(int x, int y, int w, int h, int p, DWORD color)
 
 	DrawFilledBox(x, y + h, w + p, p, color);
 }
-
-
+void DrawString(int x, int y, DWORD color, LPD3DXFONT g_pFont, const char* fmt)
+{
+	RECT FontPos = { x, y, x + 120, y + 16 };
+	g_pFont->DrawTextA(NULL, fmt, -1, &FontPos, DT_NOCLIP, color);
+}
+Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix);
+std::vector<Entity*>* Entity_List();
 void RENDER()
 {
 	int color1 = rand() % (255 - 1) + 1;
@@ -71,7 +75,39 @@ void RENDER()
 
 
 		*/
-		DrawFilledBox(50, 50, 50, 50, D3DCOLOR_ARGB(255, 255, 0, 150));
+		/*HACKS*/
+		std::vector<Entity*>* List = Entity_List();
+		for (Entity* Ent : *List)
+		{
+			if (global::Esp && Ent->Team_Number != global::player->Team_Number)
+			{
+				Vector3 low = Ent->Position;
+				Ent->Position.z += 5.5f;
+				low.z -= .4f;
+				Vector3 wts = _WorldToScreen(Ent->Position, global::player->view_matrix);
+				Vector3 wtsl = _WorldToScreen(low, global::player->view_matrix);
+				if (wts.x <= global::Game.size.x && wts.x >= 0 && wts.y <= global::Game.size.y && wts.y >= 0 && wts.z != 0.1f && Ent->Health > 0 && global::player->Health > 0)
+				{
+					int height = abs(wts.y - wtsl.y);
+					int width = height / 1.7f;
+					
+					DrawFilledBox(wts.x - (width / 2), wts.y, width, 1, D3DCOLOR_ARGB(255, 255, 0, 150));
+					DrawFilledBox(wts.x - (width / 2), wtsl.y, width, 1, D3DCOLOR_ARGB(255, 255, 0, 150));
+					DrawFilledBox(wts.x - (width / 2), wts.y, 1, height + 1, D3DCOLOR_ARGB(255, 255, 0, 150));
+					DrawFilledBox(wts.x + (width / 2), wts.y, 1, height + 1, D3DCOLOR_ARGB(255, 255, 0, 150));
+					/*
+					DRAW INFO
+					*/
+					D3DXCreateFont(d3ddev, width-10, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial", &pFont);
+					
+					DrawString(wts.x, wts.y - width, D3DCOLOR_ARGB(255, 255, 0, 150), pFont, Ent->Name);
+				}
+			}
+				delete Ent;
+		}
+		delete List;
+		/*     */
+
 		/*
 
 

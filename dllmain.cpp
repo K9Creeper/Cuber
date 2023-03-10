@@ -5,27 +5,34 @@
 #include <functional>
 #include <thread>
 #include "Graphics.h"
-
+constexpr static int bordersize = 26;
+constexpr static int bordersizex = 2;
 Vector2 GetWindowPos(HWND hwnd) {
     RECT rect = { NULL };
     if (GetWindowRect(hwnd, &rect))
         return { static_cast<float>(rect.left), static_cast<float>(rect.top) };
 }
 Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix) {
-    Vector3 out;
-    float _x = matrix.matrix[0] * pos.x + matrix.matrix[1] * pos.y + matrix.matrix[2] * pos.z + matrix.matrix[3];
-    float _y = matrix.matrix[4] * pos.x + matrix.matrix[5] * pos.y + matrix.matrix[6] * pos.z + matrix.matrix[7];
-    out.z = matrix.matrix[12] * pos.x + matrix.matrix[13] * pos.y + matrix.matrix[14] * pos.z + matrix.matrix[15];
+    Vector3 screen;
+    Vector4 clipCoords;
+    clipCoords.x = pos.x * matrix.matrix[0] + pos.y * matrix.matrix[4] + pos.z * matrix.matrix[8] + matrix.matrix[12];
+    clipCoords.y = pos.x * matrix.matrix[1] + pos.y * matrix.matrix[5] + pos.z * matrix.matrix[9] + matrix.matrix[13];
+    clipCoords.z = pos.x * matrix.matrix[2] + pos.y * matrix.matrix[6] + pos.z * matrix.matrix[10] + matrix.matrix[14];
+    clipCoords.w = pos.x * matrix.matrix[3] + pos.y * matrix.matrix[7] + pos.z * matrix.matrix[11] + matrix.matrix[15];
 
-    int width = Read<int>(global::client + 0x110C94); //Gets res
-    int height = Read<int>(global::client + 0x110C98);
+    if (clipCoords.w < 0.1f)
+        screen.z = 0.1f;
 
-    out.x = (width / 2) + (width / 2) * _x / out.z;
-    out.y = (height / 2) - (height / 2) * _y / out.z;
-    out.z = out.z;
-
-    return out;
+    Vector3 NDC;
+    NDC.x = clipCoords.x / clipCoords.w;
+    NDC.y = clipCoords.y / clipCoords.w;
+    NDC.z = clipCoords.z / clipCoords.w;
+    
+    screen.x = (global::Game.size.x / 2 * NDC.x) + (NDC.x + global::Game.size.x / 2);
+    screen.y = -(global::Game.size.y / 2 * NDC.y) + (NDC.y + global::Game.size.y / 2);
+    return screen;
 }
+
 Vector2 CalcAngle(Vector3 pos, Vector3 dst);
 Entity* Entity_Inti(DWORD BASE, int i)
 {
@@ -149,6 +156,11 @@ void Thread_Control()
             global::AimBot = !global::AimBot;
             Sleep(170);
         }
+        else if (GetKeyState(VK_NUMPAD4) & 0x8000)
+        {
+            global::Esp = !global::Esp;
+            Sleep(170);
+        }
         Sleep(5);
     }
 }
@@ -158,6 +170,8 @@ void Hack_Thread()
     {
         global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
         global::Game.position = GetWindowPos(global::Game.hwnd);  
+        global::Game.position.y += bordersize;
+        global::Game.position.x += bordersizex;
         global::player_count = Read<int>(global::client + 0x10F500);
         margin = { 0, 0, static_cast<int>(global::Game.size.x), static_cast<int>(global::Game.size.y) };
         global::Game.focused = (GetForegroundWindow() == global::Game.hwnd);
@@ -194,6 +208,8 @@ void Thread()
     global::Game.hwnd = FindWindow(NULL, L"AssaultCube");
     global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
     global::Game.position = GetWindowPos(global::Game.hwnd);
+    global::Game.position.y += bordersize;
+    global::Game.position.x += bordersizex;
     /*               */
      
     std::thread Controls(Thread_Control);
@@ -202,7 +218,7 @@ void Thread()
     std::thread overlay(ThreadProc);
    /*              */
     
-    while (global::THREAD_ON)
+    while (global::THREAD_ON && global::Debug)
     {
         
         std::cout << "Player:\n\t"<<global::player->Name<<"\n\t\tStatus:\n\t\t\tHealth: " << global::player->Health << " / 100\n\t\t\tArmour: " << global::player->Armour << "\n\t\t\tTeam #: " << global::player->Team_Number << "\n\t\t\tPosition:  X: " << global::player->Position.x << ", Y: " << global::player->Position.y << ", Z: " << global::player->Position.z << "\n\t\tWeapon (equipped):\n\t\t\tName: " << global::player->Equipped.weapon_name << "\n\t\t\tAmmo: " << global::player->Equipped.weapon_ammo.loaded << " / " << global::player->Equipped.weapon_ammo.inv << "\n" << std::endl;
@@ -285,6 +301,7 @@ DWORD WINAPI ThreadProc() {
     ShowWindow(global::overlay, SW_SHOWDEFAULT);
     SetWindowPos(global::overlay, HWND_NOTOPMOST, global::Game.position.x, global::Game.position.y, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     initD3D();
+    SetForegroundWindow(global::overlay);//Focus this.
     while (global::THREAD_ON)
     {
         SetWindowPos(global::overlay, HWND_TOPMOST, global::Game.position.x, global::Game.position.y, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -294,6 +311,8 @@ DWORD WINAPI ThreadProc() {
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
             //275 - WM_TIMER???
+            if (msg.message == WM_TIMER)
+                SetForegroundWindow(global::Game.hwnd);//So it shows / begins the sqaure
             TranslateMessage(&msg);
             
             DispatchMessage(&msg);
