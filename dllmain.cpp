@@ -160,6 +160,7 @@ void Hack_Thread()
         global::Game.position = GetWindowPos(global::Game.hwnd);  
         global::player_count = Read<int>(global::client + 0x10F500);
         margin = { 0, 0, static_cast<int>(global::Game.size.x), static_cast<int>(global::Game.size.y) };
+        global::Game.focused = (GetForegroundWindow() == global::Game.hwnd);
         Player_Inti();
         std::vector<Entity*>* List = Entity_List();
         for (Entity* Ent : *List)
@@ -194,11 +195,13 @@ void Thread()
     global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
     global::Game.position = GetWindowPos(global::Game.hwnd);
     /*               */
-    /*SET UP OVERLAY*/
-    std::thread overlay(ThreadProc);
-    /*              */    
+     
     std::thread Controls(Thread_Control);
     std::thread Hax(Hack_Thread);
+    /*SET UP OVERLAY*/
+    std::thread overlay(ThreadProc);
+   /*              */
+    
     while (global::THREAD_ON)
     {
         
@@ -231,7 +234,6 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call,LPVOID lpReser
     case DLL_PROCESS_ATTACH:
         
         global::Main = std::thread(Thread);
-        global::inj_hModule = hModule;
         
 
         break;
@@ -279,29 +281,33 @@ DWORD WINAPI ThreadProc() {
     SetWindowLong(global::overlay, GWL_EXSTYLE, (int)GetWindowLong(global::overlay, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT);
     SetLayeredWindowAttributes(global::overlay, RGB(0, 0, 0), 0, ULW_COLORKEY);
     SetLayeredWindowAttributes(global::overlay, 0, 255, LWA_ALPHA);
-    initD3D();
-    ShowWindow(global::overlay, SW_SHOWNORMAL);
     
+    ShowWindow(global::overlay, SW_SHOWDEFAULT);
+    SetWindowPos(global::overlay, HWND_NOTOPMOST, global::Game.position.x, global::Game.position.y, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    initD3D();
     while (global::THREAD_ON)
     {
-        
-        ::SetWindowPos(global::overlay, HWND_NOTOPMOST, global::Game.position.x, global::Game.position.y, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        SetWindowPos(global::overlay, HWND_TOPMOST, global::Game.position.x, global::Game.position.y, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         
         RENDER();
-        
+
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
+            //275 - WM_TIMER???
             TranslateMessage(&msg);
+            
             DispatchMessage(&msg);
+            if (msg.message == WM_QUIT)
+            {
+
+                global::THREAD_ON = false;
+                pFont->Release();
+                Arrow->Release();
+                d3d->Release();
+                d3ddev->Release();
+            }
         }
-    }
-    if (msg.message == WM_QUIT)
-    {
-        global::THREAD_ON = false;
-        pFont->Release();
-        Arrow->Release();
-        d3d->Release();
-        d3ddev->Release();
+        
     }
     return 1;
 
@@ -314,10 +320,10 @@ LRESULT CALLBACK DLLWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
         DwmExtendFrameIntoClientArea(global::overlay, &margin);
         break;
     case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hwnd, message, wParam, lParam);
+     PostQuitMessage(0);
+     return 0;
+     break;
+
     }
-    return 0;
+    return DefWindowProc(hwnd, message, wParam, lParam);
 }

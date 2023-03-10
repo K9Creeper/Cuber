@@ -56,7 +56,6 @@ void DrawLinedBox(int x, int y, int w, int h, int p, DWORD color)
 
 void RENDER()
 {
-
 	int color1 = rand() % (255 - 1) + 1;
 	int color2 = rand() % (255 - 1) + 1;
 	int color3 = rand() % (255 - 1) + 1;
@@ -64,16 +63,22 @@ void RENDER()
 	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
 
 	d3ddev->BeginScene();    // begins the 3D scene
-	/*	
 	
-	*/
-	
-	DrawFilledBox(0, 0, 50, 50, D3DCOLOR_ARGB(255, 255,0,0));
+	if (global::Game.focused)
+	{
+		/*
 
-	/*
+
+
+		*/
+		DrawFilledBox(50, 50, 50, 50, D3DCOLOR_ARGB(255, 255, 0, 150));
+		/*
+
+
+
+		*/
+	}
 	
-	
-	*/
 	d3ddev->EndScene();    // ends the 3D scene
 	d3ddev->Present(NULL, NULL, NULL, NULL);   // displays the created frame on the screen
 }

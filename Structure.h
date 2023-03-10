@@ -35,9 +35,9 @@ struct Weapon //0x374
     char weapon_name[16]/*0x0C*/;
     ammo weapon_ammo;
 };
-
 struct Game_Window {
     char name[16];
+    bool focused;
     HWND hwnd;
     Vector2 position;
     Vector2 size;
