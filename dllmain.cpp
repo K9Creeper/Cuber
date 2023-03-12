@@ -201,9 +201,12 @@ void Thread()
     global::client = (DWORD)GetModuleHandle(global::ac_client);
     global::entity_list = Read<DWORD>(global::client + 0x10F4F8);
     global::player_p = Read<DWORD>(global::client + 0x109B74);
-    AllocConsole();
-    SetWindowText(GetConsoleWindow(), L"Debug");
-    freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    if (global::Debug)
+    {
+        AllocConsole();
+        SetWindowText(GetConsoleWindow(), L"Debug");
+        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    }
     /*GAME HWND STUFF*/
     global::Game.hwnd = FindWindow(NULL, L"AssaultCube");
     global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
@@ -312,7 +315,7 @@ DWORD WINAPI ThreadProc() {
         {
             //275 - WM_TIMER???
             if (msg.message == WM_TIMER)
-                SetForegroundWindow(global::Game.hwnd);//So it shows / begins the sqaure
+                SetForegroundWindow(global::Game.hwnd);//So it shows / begins the drawing
             TranslateMessage(&msg);
             
             DispatchMessage(&msg);
@@ -320,7 +323,9 @@ DWORD WINAPI ThreadProc() {
             {
 
                 global::THREAD_ON = false;
-                pFont->Release();
+                pFontS->Release();
+                pFontL->Release();
+                pFontM->Release();
                 Arrow->Release();
                 d3d->Release();
                 d3ddev->Release();

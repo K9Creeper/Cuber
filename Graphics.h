@@ -6,8 +6,7 @@
 
 LPDIRECT3D9 d3d;    // the pointer to our Direct3D interface
 LPDIRECT3DDEVICE9 d3ddev;
-LPD3DXFONT pFont;
-LPD3DXFONT Arrow;
+LPD3DXFONT pFontS, pFontM, pFontL, Arrow;
 MARGINS  margin;
 
 void initD3D()
@@ -34,7 +33,10 @@ void initD3D()
 		D3DCREATE_SOFTWARE_VERTEXPROCESSING,
 		&d3dpp,
 		&d3ddev);
-	D3DXCreateFont(d3ddev, 16, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Ariall", &Arrow);
+	D3DXCreateFont(d3ddev, 20, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial", &pFontM);
+	D3DXCreateFont(d3ddev, 10, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial", &pFontS);
+	D3DXCreateFont(d3ddev, 30, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH| FF_DONTCARE, L"Arial", &pFontL);
+	D3DXCreateFont(d3ddev, 10, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH| FF_DONTCARE, L"Ariall", &Arrow);
 }
 void DrawFilledBox(int x, int y, int w, int h, DWORD color)
 {
@@ -56,6 +58,7 @@ void DrawString(int x, int y, DWORD color, LPD3DXFONT g_pFont, const char* fmt)
 	RECT FontPos = { x, y, x + 120, y + 16 };
 	g_pFont->DrawTextA(NULL, fmt, -1, &FontPos, DT_NOCLIP, color);
 }
+
 Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix);
 std::vector<Entity*>* Entity_List();
 void RENDER()
@@ -98,9 +101,27 @@ void RENDER()
 					/*
 					DRAW INFO
 					*/
-					D3DXCreateFont(d3ddev, width-10, 0, FW_NORMAL, 1, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial", &pFont);
-					
-					DrawString(wts.x, wts.y - width, D3DCOLOR_ARGB(255, 255, 0, 150), pFont, Ent->Name);
+					std::string s = "Health: "+std::to_string(Ent->Health)+" / 100  Armour: "+std::to_string(Ent->Armour);
+					std::string m = "Team #: " + std::to_string(Ent->Team_Number);
+					std::string p = "Position:   X: " + std::to_string(Ent->Position.x) + " Y: " + std::to_string(Ent->Position.y) + " Z: " + std::to_string(Ent->Position.z);
+					if (width >= 40)
+					{
+						DrawString(wts.x - (width * 2), wtsl.y+3, D3DCOLOR_ARGB(255, 255, 0, 150), pFontL, Ent->Name);
+						DrawString(wts.x - (width * 2), wtsl.y + 27, D3DCOLOR_ARGB(255, 255, 0, 150), pFontL, s.c_str());
+						DrawString(wts.x - (width * 2), wtsl.y + 51, D3DCOLOR_ARGB(255, 255, 0, 150), pFontL, p.c_str());
+					}
+					else if (width <= 15)
+					{
+						DrawString(wts.x - (width * 2), wtsl.y+3, D3DCOLOR_ARGB(255, 255, 0, 150), pFontS, Ent->Name);
+						DrawString(wts.x - (width * 2), wtsl.y + 12, D3DCOLOR_ARGB(255, 255, 0, 150), pFontS, s.c_str());
+						DrawString(wts.x - (width * 2), wtsl.y + 21, D3DCOLOR_ARGB(255, 255, 0, 150), pFontS, p.c_str());
+					}
+					else
+					{
+						DrawString(wts.x - (width * 2), wtsl.y+3, D3DCOLOR_ARGB(255, 255, 0, 150), pFontM, Ent->Name);
+						DrawString(wts.x - (width * 2), wtsl.y + 17, D3DCOLOR_ARGB(255, 255, 0, 150), pFontM, s.c_str());
+						DrawString(wts.x - (width * 2), wtsl.y + 31, D3DCOLOR_ARGB(255, 255, 0, 150), pFontM, p.c_str());
+					}
 				}
 			}
 				delete Ent;
