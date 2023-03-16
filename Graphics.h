@@ -1,13 +1,6 @@
 #pragma once
-#include <d3d9.h>
-#include <d3dx9.h>
 #include <dwmapi.h>
 #include "Structure.h"
-
-LPDIRECT3D9 d3d;    // the pointer to our Direct3D interface
-LPDIRECT3DDEVICE9 d3ddev;
-LPD3DXFONT pFontS, pFontM, pFontL, Arrow;
-MARGINS  margin;
 
 void initD3D()
 {
@@ -58,9 +51,6 @@ void DrawString(int x, int y, DWORD color, LPD3DXFONT g_pFont, const char* fmt)
 	RECT FontPos = { x, y, x + 120, y + 16 };
 	g_pFont->DrawTextA(NULL, fmt, -1, &FontPos, DT_NOCLIP, color);
 }
-
-Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix);
-std::vector<Entity*>* Entity_List();
 void RENDER()
 {
 	int color1 = rand() % (255 - 1) + 1;
@@ -128,7 +118,10 @@ void RENDER()
 		}
 		delete List;
 		/*     */
+		/*  MENU  */
+		menu->DrawMenu();
 
+		/*          */
 		/*
 
 

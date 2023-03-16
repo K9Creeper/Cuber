@@ -2,8 +2,6 @@
 #include "pch.h"
 #include <iostream>
 
-#include <functional>
-#include <thread>
 #include "Graphics.h"
 constexpr static int bordersize = 26;
 constexpr static int bordersizex = 2;
@@ -77,26 +75,6 @@ std::vector<Entity*>* Entity_List()
         List->push_back(Entity_Inti(Read<DWORD>(global::entity_list + (i * 4)), i));
     return List;
  }
-class Entity_Specific {
-public:
-    bool Get_Pos_Of_S_Ent(int p, Vector3* Pos)
-    {
-        auto L = Entity_List();
-        bool V = false;
-        for (auto S : *L)
-        {
-            if (S->place_number == p)
-            {
-                V = true;
-                *Pos = S->Position;
-            }
-            delete S;
-        }
-        delete L;
-        return V;
-    }
-};
-
 Vector2 CalcAngle(Vector3 pos, Vector3 dst)
 {
     float turnX = static_cast<float>(atan((pos.x - dst.x) / (pos.y - dst.y)) * (180 / 3.14159f));
@@ -126,41 +104,54 @@ void Thread_Control()
     {
         if (GetKeyState(VK_NUMPAD2) & 0x8000)
         {
-            global::selected++;
-            if (global::selected >= global::player_count)
-                global::selected = 1;
+            menu->MenuDwn();
             Sleep(170);
         }
         else if (GetKeyState(VK_NUMPAD8) & 0x8000)
         {
-            global::selected--;
-            if (global::selected <= 0)
-                global::selected = global::player_count - 1;
+            menu->MenuUp();
             Sleep(170);
-        }
-        else if (GetKeyState(VK_NUMPAD9) & 0x8000)
-        {
-            Entity_Specific* s = new Entity_Specific();
-            Vector3 P;
-            if (s->Get_Pos_Of_S_Ent(global::selected, &P))
-                Teleport(global::player_p, P);
-            delete s;
-            Sleep(170);
-        }
-        else if (GetKeyState(VK_NUMPAD7) & 0x8000)
-        {
-            global::Show_Info = !global::Show_Info;
         }
         else if (GetKeyState(VK_NUMPAD5) & 0x8000)
         {
-            global::AimBot = !global::AimBot;
+            menu->Execute();
             Sleep(170);
         }
+        else if (GetKeyState(VK_NUMPAD0) & 0x8000)
+        {
+            menu->BackMenu();
+            Sleep(170);
+        }
+        else if (GetKeyState(VK_MULTIPLY) & 0x8000)
+        {
+            menu->MenuVisibility(!menu->IsHidden());
+            Sleep(170);
+        }        
         else if (GetKeyState(VK_NUMPAD4) & 0x8000)
         {
-            global::Esp = !global::Esp;
-            Sleep(170);
+            if (menu->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
+            {
+                if (global::selected - 1 <= 0)
+                    global::selected = global::player_count - 1;
+                else
+                    global::selected--;
+                
+                Sleep(170);
+            }
         }
+        else if (GetKeyState(VK_NUMPAD6) & 0x8000)
+        {
+            if (menu->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
+            {
+                if (global::selected + 1 > global::player_count - 1)
+                    global::selected = 1;
+                else
+                    global::selected++;
+                
+                Sleep(170);
+            }
+        }
+
         Sleep(5);
     }
 }
@@ -201,12 +192,7 @@ void Thread()
     global::client = (DWORD)GetModuleHandle(global::ac_client);
     global::entity_list = Read<DWORD>(global::client + 0x10F4F8);
     global::player_p = Read<DWORD>(global::client + 0x109B74);
-    if (global::Debug)
-    {
-        AllocConsole();
-        SetWindowText(GetConsoleWindow(), L"Debug");
-        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-    }
+
     /*GAME HWND STUFF*/
     global::Game.hwnd = FindWindow(NULL, L"AssaultCube");
     global::Game.size = { static_cast<float>(Read<int>(global::client + 0x110C94)) ,static_cast<float>(Read<int>(global::client + 0x110C98)) };
@@ -214,6 +200,31 @@ void Thread()
     global::Game.position.y += bordersize;
     global::Game.position.x += bordersizex;
     /*               */
+
+    /*
+    MENU SETUP
+    */
+    
+    Sub_Menu* Sub1 = new Sub_Menu("Main");
+    Sub_Menu* Sub2 = new Sub_Menu("HACKS");
+    Sub2->Add_Toggle("ESP", global::Esp);
+    Sub2->Add_Toggle("Aimbot", global::AimBot);
+    Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V);delete E;});
+    Sub2->Add_Action("Entity", [&] {}, 4);
+    Sub1->Add_Sub_Menu(Sub2);
+    Sub1->Add_Action("Quit / Exit", [&] {PostMessage(global::overlay, WM_DESTROY, NULL, NULL); });
+    menu = new Menu(Sub1);
+    
+    /*
+    
+    */
+    if (global::Debug)
+    {
+        AllocConsole();
+        SetWindowText(GetConsoleWindow(), L"Debug");
+        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    }
+
      
     std::thread Controls(Thread_Control);
     std::thread Hax(Hack_Thread);
@@ -285,7 +296,7 @@ BOOL RegisterDLLWindowClass()
         return 0;
 }
 DWORD WINAPI ThreadProc() {
-    MSG msg;
+    
     RegisterDLLWindowClass();
     global::overlay = CreateWindowEx(0,
         L"WindowClass",
@@ -311,17 +322,17 @@ DWORD WINAPI ThreadProc() {
         
         RENDER();
 
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        while (PeekMessage(&global::msg, NULL, 0, 0, PM_REMOVE))
         {
             //275 - WM_TIMER???
-            if (msg.message == WM_TIMER)
+            if (global::msg.message == WM_TIMER)
                 SetForegroundWindow(global::Game.hwnd);//So it shows / begins the drawing
-            TranslateMessage(&msg);
+            TranslateMessage(&global::msg);
             
-            DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
+            DispatchMessage(&global::msg);
+            if (global::msg.message == WM_QUIT)
             {
-
+                std::cout << "Quit" << std::endl;
                 global::THREAD_ON = false;
                 pFontS->Release();
                 pFontL->Release();
@@ -329,6 +340,7 @@ DWORD WINAPI ThreadProc() {
                 Arrow->Release();
                 d3d->Release();
                 d3ddev->Release();
+                menu->Release();    
             }
         }
         
