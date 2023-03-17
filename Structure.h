@@ -37,6 +37,7 @@ class Entity_Specific;
 class Player;
 Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix);
 class Sub_Menu;
+template<typename T>
 struct Option;
 struct Options_Class;
 class Menu;
@@ -129,7 +130,7 @@ namespace global {
     static auto ac_client = L"ac_client.exe";
     std::thread Main;
     bool THREAD_ON = true;
-    bool Debug = false;
+    bool Debug = true;
 
     HINSTANCE  inj_hModule;
     Game_Window Game;
@@ -148,15 +149,19 @@ namespace global {
     Player* player = new Player();
     
 };
+template<typename T>
 struct Option {
     int option_type = NULL;/* 1- Submenu 2- button  3-toggle 4- kinda-array*/
     const char* option_name = NULL;
     std::function<void()> function = NULL;
     Sub_Menu* Sub = nullptr;
-    bool* boolean = nullptr;
+    bool* boolean = nullptr;    
+    std::vector<T>*Array = nullptr;
+    T* change;
+    int array_index = 0;
 };
 struct Options_Class {
-    std::vector<Option*>* Option_List = new std::vector<Option*>;
+    std::vector<Option<int>*>* Option_List = new std::vector<Option<int>*>;
     int selected_option_index = 0;
 };
 class Sub_Menu {
@@ -166,11 +171,11 @@ private:
     Options_Class* Options = nullptr;
 public:
     Sub_Menu(const char* Menu_Name) { this->Menu_Name = Menu_Name; this->Options = new Options_Class; }
-    std::vector<Option*>* GetOptionsList()
+    std::vector<Option<int>*>* GetOptionsList()
     {
         return this->Options->Option_List;
     }
-    Option* GetSelectedOption()
+    Option<int>* GetSelectedOption()
     {
         return this->Options->Option_List->at(this->Options->selected_option_index);
     }
@@ -188,7 +193,7 @@ public:
     }
     void Add_Sub_Menu(Sub_Menu* Menu)
     {
-        Option* Op = new Option;
+        Option<int>* Op = new Option<int>;
         Menu->Parent_Menu = this;
         Op->option_name = Menu->GetMenuName();
         Op->Sub = Menu;
@@ -197,25 +202,32 @@ public:
     }
     void Add_Toggle(const char* Toggle_Name, bool& b)
     {
-        Option* Op = new Option;
+        Option<int>* Op = new Option<int>;
         Op->option_name = Toggle_Name;
         Op->option_type = ToggleType;
         Op->boolean = &b;
         Op->function = [&] { b = !b; };
         this->Options->Option_List->push_back(Op);
     }
-    void Add_Action(const char* Action_Name, std::function<void()>Func, int t = 2)
+    void Add_Action(const char* Action_Name, std::function<void()>Func)
     {
-        Option* Op = new Option;
+        Option<int>* Op = new Option<int>;
         Op->option_name = Action_Name;
-        Op->option_type = t;
+        Op->option_type = ActionType;
         Op->function = Func;
         this->Options->Option_List->push_back(Op);
     }
     template <typename T>
-    void Add_Array(std::vector<T*>* value)
+    void Add_Array(std::vector<T>* value, const char* Array_Name, T* change)
     {
-       
+        Option<T>* Op = new Option<T>;
+        Op->option_name = Array_Name;
+        Op->option_type = 4;
+        Op->Array = value; 
+        Op->change = change;
+        Op->function = [&]{ Op->change = &Op->Array->at(Op->array_index); };
+        this->Options->Option_List->push_back(Op);
+        Op->function();
     }
 };
 class Menu {
@@ -254,13 +266,18 @@ public:
                 DrawFilledBox(MenuX, Y, MenuBorderSize, BoxHeight + MenuBorderSize, BORDERCOLOR);
                 DrawFilledBox(MenuX+ BoxWidth, Y, MenuBorderSize, BoxHeight + MenuBorderSize, BORDERCOLOR);
                 std::string name = this->Selected->GetOptionsList()->at(i)->option_name;
-                if (Selected->GetOptionsList()->at(i)->option_type == 3)
-                    if (*Selected->GetOptionsList()->at(i)->boolean)
+                if (this->Selected->GetOptionsList()->at(i)->option_type == 3)
+                    if (*this->Selected->GetOptionsList()->at(i)->boolean)
                         name += " ON";
                     else
                         name += " OFF";
-                else if (Selected->GetOptionsList()->at(i)->option_type == 1)
+                else if (this->Selected->GetOptionsList()->at(i)->option_type == 1)
                     name += "  >";
+                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4)
+                {
+                    name += "  < "+ std::to_string(*this->Selected->GetOptionsList()->at(i)->change);
+                    name += " >";
+                }
                 DrawString(IMenux, Y + BoxHeight / 3, TEXTCOLOR, pFontS, name.c_str());
             }
             
@@ -281,6 +298,28 @@ public:
             this->Selected->GetOptionClass()->selected_option_index += 1;
         else
             this->Selected->GetOptionClass()->selected_option_index = 0;
+    }
+    void MenuArrayRight(){
+        if (this->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
+        {
+
+            if (this->GetSelectedMenu()->GetSelectedOption()->array_index + 1 >= this->GetSelectedMenu()->GetSelectedOption()->Array->size())
+                this->GetSelectedMenu()->GetSelectedOption()->array_index = 0;
+            else
+                this->GetSelectedMenu()->GetSelectedOption()->array_index++;
+            this->Execute();
+        }
+    }
+    void MenuArrayLeft() {
+        if (this->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
+        {
+
+            if (this->GetSelectedMenu()->GetSelectedOption()->array_index - 1 < 0)
+                this->GetSelectedMenu()->GetSelectedOption()->array_index = this->GetSelectedMenu()->GetSelectedOption()->Array->size()-1;
+            else
+                this->GetSelectedMenu()->GetSelectedOption()->array_index--;
+            this->Execute();
+        }
     }
     void Execute()
     {
@@ -310,7 +349,7 @@ public:
         while (loop)
         {
             bool empyu = true;
-            for (Option * Op : *CLoop->GetOptionsList()){
+            for (Option<int>* Op : *CLoop->GetOptionsList()){
                 if (Op->option_type == 1 && Op->Sub != nullptr /*Just in case*/)
                 {
                     empyu = false;
@@ -319,8 +358,11 @@ public:
                 }
                 else
                 {
+                    if (Op->Sub != nullptr)
                     delete Op->Sub;
+                    if(Op->boolean != nullptr)
                     delete Op->boolean;
+                    
                     //Delete other stuff....DO LATER
                 }
                 delete Op;

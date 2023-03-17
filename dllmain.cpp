@@ -5,6 +5,7 @@
 #include "Graphics.h"
 constexpr static int bordersize = 26;
 constexpr static int bordersizex = 2;
+
 Vector2 GetWindowPos(HWND hwnd) {
     RECT rect = { NULL };
     if (GetWindowRect(hwnd, &rect))
@@ -129,27 +130,13 @@ void Thread_Control()
         }        
         else if (GetKeyState(VK_NUMPAD4) & 0x8000)
         {
-            if (menu->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
-            {
-                if (global::selected - 1 <= 0)
-                    global::selected = global::player_count - 1;
-                else
-                    global::selected--;
-                
+                menu->MenuArrayLeft();
                 Sleep(170);
-            }
         }
         else if (GetKeyState(VK_NUMPAD6) & 0x8000)
         {
-            if (menu->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
-            {
-                if (global::selected + 1 > global::player_count - 1)
-                    global::selected = 1;
-                else
-                    global::selected++;
-                
+            menu->MenuArrayRight();
                 Sleep(170);
-            }
         }
 
         Sleep(5);
@@ -204,17 +191,18 @@ void Thread()
     /*
     MENU SETUP
     */
-    
+    int ilil = 0;
+    std::vector<int>*D = new std::vector<int>{ 1, 2, 4, 6 };
     Sub_Menu* Sub1 = new Sub_Menu("Main");
     Sub_Menu* Sub2 = new Sub_Menu("HACKS");
     Sub2->Add_Toggle("ESP", global::Esp);
     Sub2->Add_Toggle("Aimbot", global::AimBot);
     Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V);delete E;});
-    Sub2->Add_Action("Entity", [&] {}, 4);
+    Sub2->Add_Array<int>(D, "Slected Player", &ilil);
     Sub1->Add_Sub_Menu(Sub2);
     Sub1->Add_Action("Quit / Exit", [&] {PostMessage(global::overlay, WM_DESTROY, NULL, NULL); });
     menu = new Menu(Sub1);
-    
+
     /*
     
     */
@@ -248,6 +236,7 @@ void Thread()
             delete Ent;//Remebmer to delete!!!!! 
         }
         delete List;//Not a vector array
+        std::cout << menu->GetSelectedMenu()->GetSelectedOption()->change << std::endl;
         Sleep(100);
         system("cls");
     }
