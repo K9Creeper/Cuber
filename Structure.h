@@ -157,7 +157,7 @@ struct Option {
     Sub_Menu* Sub = nullptr;
     bool* boolean = nullptr;    
     std::vector<T>*Array = nullptr;
-    T* change;
+    T* change = nullptr;
     int array_index = 0;
 };
 struct Options_Class {
@@ -223,9 +223,11 @@ public:
         Option<T>* Op = new Option<T>;
         Op->option_name = Array_Name;
         Op->option_type = 4;
-        Op->Array = value; 
+        Op->Array = value;
         Op->change = change;
-        Op->function = [&]{ Op->change = &Op->Array->at(Op->array_index); };
+        Op->function = [&] {
+           // *Op->change = Op->Array->at(Op->array_index);
+        };
         this->Options->Option_List->push_back(Op);
         Op->function();
     }
@@ -273,10 +275,10 @@ public:
                         name += " OFF";
                 else if (this->Selected->GetOptionsList()->at(i)->option_type == 1)
                     name += "  >";
-                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4)
+                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4 && this->Selected->GetOptionsList()->at(i)->change != nullptr)
                 {
-                    name += "  < "+ std::to_string(*this->Selected->GetOptionsList()->at(i)->change);
-                    name += " >";
+                   name += "  < "+ std::to_string(*this->Selected->GetOptionsList()->at(i)->change);
+                   name += " >";
                 }
                 DrawString(IMenux, Y + BoxHeight / 3, TEXTCOLOR, pFontS, name.c_str());
             }
@@ -358,11 +360,9 @@ public:
                 }
                 else
                 {
-                    if (Op->Sub != nullptr)
                     delete Op->Sub;
-                    if(Op->boolean != nullptr)
                     delete Op->boolean;
-                    
+                    delete Op->change;
                     //Delete other stuff....DO LATER
                 }
                 delete Op;

@@ -187,18 +187,23 @@ void Thread()
     global::Game.position.y += bordersize;
     global::Game.position.x += bordersizex;
     /*               */
-
+    if (global::Debug)
+    {
+        AllocConsole();
+        SetWindowText(GetConsoleWindow(), L"Debug");
+        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    }
     /*
     MENU SETUP
     */
-    int ilil = 0;
+    int X = 0;
     std::vector<int>*D = new std::vector<int>{ 1, 2, 4, 6 };
     Sub_Menu* Sub1 = new Sub_Menu("Main");
     Sub_Menu* Sub2 = new Sub_Menu("HACKS");
     Sub2->Add_Toggle("ESP", global::Esp);
     Sub2->Add_Toggle("Aimbot", global::AimBot);
     Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V);delete E;});
-    Sub2->Add_Array<int>(D, "Slected Player", &ilil);
+    Sub2->Add_Array<int>(D, "Slected Player", &X);
     Sub1->Add_Sub_Menu(Sub2);
     Sub1->Add_Action("Quit / Exit", [&] {PostMessage(global::overlay, WM_DESTROY, NULL, NULL); });
     menu = new Menu(Sub1);
@@ -206,12 +211,7 @@ void Thread()
     /*
     
     */
-    if (global::Debug)
-    {
-        AllocConsole();
-        SetWindowText(GetConsoleWindow(), L"Debug");
-        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-    }
+    
 
      
     std::thread Controls(Thread_Control);
@@ -220,7 +220,7 @@ void Thread()
     std::thread overlay(ThreadProc);
    /*              */
     
-    while (global::THREAD_ON && global::Debug)
+    while (global::THREAD_ON && global::Debug && false)
     {
         
         std::cout << "Player:\n\t"<<global::player->Name<<"\n\t\tStatus:\n\t\t\tHealth: " << global::player->Health << " / 100\n\t\t\tArmour: " << global::player->Armour << "\n\t\t\tTeam #: " << global::player->Team_Number << "\n\t\t\tPosition:  X: " << global::player->Position.x << ", Y: " << global::player->Position.y << ", Z: " << global::player->Position.z << "\n\t\tWeapon (equipped):\n\t\t\tName: " << global::player->Equipped.weapon_name << "\n\t\t\tAmmo: " << global::player->Equipped.weapon_ammo.loaded << " / " << global::player->Equipped.weapon_ammo.inv << "\n" << std::endl;
@@ -236,10 +236,10 @@ void Thread()
             delete Ent;//Remebmer to delete!!!!! 
         }
         delete List;//Not a vector array
-        std::cout << menu->GetSelectedMenu()->GetSelectedOption()->change << std::endl;
         Sleep(100);
         system("cls");
     }
+    
     Controls.join();
     Hax.join();
     overlay.join();
