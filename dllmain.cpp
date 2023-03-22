@@ -196,14 +196,14 @@ void Thread()
     /*
     MENU SETUP
     */
-    int X = 0;
-    std::vector<int>*D = new std::vector<int>{ 1, 2, 4, 6 };
+    std::vector<const char*>*D = new std::vector<const char*>{ "1", "2", "3", "6"};
+    int i = 0;
     Sub_Menu* Sub1 = new Sub_Menu("Main");
     Sub_Menu* Sub2 = new Sub_Menu("HACKS");
+    Sub2->Add_Array<int>(D, "Selected", i);
     Sub2->Add_Toggle("ESP", global::Esp);
     Sub2->Add_Toggle("Aimbot", global::AimBot);
     Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V);delete E;});
-    Sub2->Add_Array<int>(D, "Slected Player", &X);
     Sub1->Add_Sub_Menu(Sub2);
     Sub1->Add_Action("Quit / Exit", [&] {PostMessage(global::overlay, WM_DESTROY, NULL, NULL); });
     menu = new Menu(Sub1);
