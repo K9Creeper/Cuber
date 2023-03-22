@@ -139,6 +139,7 @@ namespace global {
 
     int player_count;//0x10F500
     int selected = 1;
+    std::vector<const char*>* Entity_Name_List = nullptr;
     bool AimBot;
     bool Esp;
     bool Show_Info = true;
@@ -227,10 +228,15 @@ public:
         Op->Array = value;
         std::cout << change << std::endl;
         Op->function = [&] {
-            std::stringstream strValue;
-            strValue << this->GetSelectedOption()->Array->at(this->GetSelectedOption()->index_array);
-            strValue >> change;
-            std::cout << change << std::endl;
+            if constexpr (std::is_same_v<const char*, T>) //ONLY const char* can do this.
+                change = this->GetSelectedOption()->Array->at(this->GetSelectedOption()->index_array);
+            else
+            {
+                std::stringstream strValue;
+                strValue << this->GetSelectedOption()->Array->at(this->GetSelectedOption()->index_array);
+                strValue >> change;
+            }
+            
         };
         this->Options->Option_List->push_back(Op);
         Op->function();
@@ -279,10 +285,10 @@ public:
                         name += " OFF";
                 else if (this->Selected->GetOptionsList()->at(i)->option_type == 1)
                     name += "  >";
-                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4)
+                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4 && this->Selected->GetOptionsList()->at(i)->Array != nullptr &&this->Selected->GetOptionsList()->at(i)->Array->size() > 0)
                 {
                     std::string sele = this->Selected->GetOptionsList()->at(i)->Array->at(this->Selected->GetOptionsList()->at(i)->index_array);
-                    name += " < ";
+                    name += "  < ";
                     name += sele + " >";
                 }
                 DrawString(IMenux, Y + BoxHeight / 3, TEXTCOLOR, pFontS, name.c_str());

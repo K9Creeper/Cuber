@@ -154,9 +154,15 @@ void Hack_Thread()
         margin = { 0, 0, static_cast<int>(global::Game.size.x), static_cast<int>(global::Game.size.y) };
         global::Game.focused = (GetForegroundWindow() == global::Game.hwnd);
         Player_Inti();
+        std::string N = "";
         std::vector<Entity*>* List = Entity_List();
         for (Entity* Ent : *List)
         {
+            
+            for (int i = 0; i < 16; i++)
+                N += Ent->Name[i];
+            global::Entity_Name_List->push_back(N.c_str());
+            N = "";
             if (Ent->place_number == global::selected)
             {
                 /*   Aim Bot   */
@@ -196,11 +202,8 @@ void Thread()
     /*
     MENU SETUP
     */
-    std::vector<const char*>*D = new std::vector<const char*>{ "1", "2", "3", "6"};
-    int i = 0;
     Sub_Menu* Sub1 = new Sub_Menu("Main");
     Sub_Menu* Sub2 = new Sub_Menu("HACKS");
-    Sub2->Add_Array<int>(D, "Selected", i);
     Sub2->Add_Toggle("ESP", global::Esp);
     Sub2->Add_Toggle("Aimbot", global::AimBot);
     Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V);delete E;});
