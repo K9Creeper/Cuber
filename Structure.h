@@ -119,7 +119,9 @@ public:
 class Player {
 public:
     char Name[16];//0x225
-    int Team_Number /*0x32C*/, Health/*0xf8*/, Armour /*0xFC*/;
+    int Team_Number /*0x32C*/
+        , Health/*0xf8*/
+        , Armour /*0xFC*/;
     char Last_Target[16];//0x101C38
     View_Matrix view_matrix;//0x501AE8
     Vector2 view_angles;
@@ -149,7 +151,6 @@ namespace global {
     DWORD entity_list;//0x10f4f8
     DWORD player_p; //0x109B74
     Player* player = new Player();
-    
 };
 
 struct Option {

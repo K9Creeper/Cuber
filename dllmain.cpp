@@ -44,7 +44,7 @@ Entity* Entity_Inti(DWORD BASE, int i)
     Ent->Position = Read<Vector3>(BASE + 0x34);//Beginning of x
     Ent->AngleToAimbot = CalcAngle(global::player->Position, Ent->Position);
     for (int i = 0; i < 16; i++)
-        Ent->Equipped.weapon_name[i] = Read<char>((Read<DWORD>(Read<DWORD>(BASE + 0x374) + 0x0C)+0x0) + i);//Pointer->Pointer->int
+        Ent->Equipped.weapon_name[i] = Read<char>((Read<DWORD>(Read<DWORD>(BASE + 0x374) + 0x0C)+0x0) + i);
     Ent->Equipped.weapon_ammo.loaded = Read<int>(Read<DWORD>(Read<DWORD>(BASE + 0x374) + 0x14));
     Ent->Equipped.weapon_ammo.inv = Read<int>(Read<DWORD>(Read<DWORD>(BASE + 0x374) + 0x10));
     return Ent;
@@ -54,7 +54,7 @@ void Player_Inti()
 {
     for (int i = 0; i < 16; i++)
     {
-        global::player->Name[i] = Read<char>(global::player_p + 0x225 + i); //Inti player names
+        global::player->Name[i] = Read<char>(global::player_p + 0x225 + i);
         global::player->Last_Target[i] = Read<char>(global::client + 0x101C38 + i);
     }
     global::player->view_matrix = Read<View_Matrix>(0x501AE8);
@@ -62,9 +62,9 @@ void Player_Inti()
     global::player->Health = max(Read<int>(global::player_p + 0xF8), 0);
     global::player->Armour = Read<int>(global::player_p + 0xFC);
     global::player->Team_Number = Read<int>(global::player_p + 0x32C);
-    global::player->Position = Read<Vector3>(global::player_p + 0x34);//Beginning of x
+    global::player->Position = Read<Vector3>(global::player_p + 0x34);
     for (int i = 0; i < 16; i++)
-        global::player->Equipped.weapon_name[i] = Read<char>((Read<DWORD>(Read<DWORD>(global::player_p + 0x374) + 0x0C) + 0x0) + i);//Pointer->Pointer->int
+        global::player->Equipped.weapon_name[i] = Read<char>((Read<DWORD>(Read<DWORD>(global::player_p + 0x374) + 0x0C) + 0x0) + i);
     global::player->Equipped.weapon_ammo.loaded = Read<int>(Read<DWORD>(Read<DWORD>(global::player_p + 0x374) + 0x14));
     global::player->Equipped.weapon_ammo.inv = Read<int>(Read<DWORD>(Read<DWORD>(global::player_p + 0x374) + 0x10));
 }
@@ -212,9 +212,10 @@ void Hack_Thread()
         for (int i = 0; i < global::Entity_Name_List->size(); i++) {
             std::string cname = global::Entity_Name_List->at(i);
             const int index = name_in_array<std::string>(*tracknames, cname);
-            if (index == -1) {
-                global::Entity_Name_List->erase(global::Entity_Name_List->begin() + index);
-            }
+                if (index == -1) {
+                    global::Entity_Name_List->erase(global::Entity_Name_List->begin() + name_in_array<std::string>(*global::Entity_Name_List, cname));
+                }
+            
         }
         delete tracknames;
     }
