@@ -19,16 +19,15 @@ Vector3 _WorldToScreen(Vector3 pos, View_Matrix matrix) {
     clipCoords.z = pos.x * matrix.matrix[2] + pos.y * matrix.matrix[6] + pos.z * matrix.matrix[10] + matrix.matrix[14];
     clipCoords.w = pos.x * matrix.matrix[3] + pos.y * matrix.matrix[7] + pos.z * matrix.matrix[11] + matrix.matrix[15];
 
-    if (clipCoords.w < 0.1f)
+    if (clipCoords.w < 0.1f) {
         screen.z = 0.1f;
+    }
 
-    Vector3 NDC;
-    NDC.x = clipCoords.x / clipCoords.w;
-    NDC.y = clipCoords.y / clipCoords.w;
-    NDC.z = clipCoords.z / clipCoords.w;
+    Vector3 NDC = { clipCoords.x / clipCoords.w , clipCoords.y / clipCoords.w, clipCoords.z / clipCoords.w };
     
     screen.x = (global::Game.size.x / 2 * NDC.x) + (NDC.x + global::Game.size.x / 2);
     screen.y = -(global::Game.size.y / 2 * NDC.y) + (NDC.y + global::Game.size.y / 2);
+
     return screen;
 }
 
@@ -76,10 +75,23 @@ std::vector<Entity*>* Entity_List()
         List->push_back(Entity_Inti(Read<DWORD>(global::entity_list + (i * 4)), i));
     return List;
  }
+int Name_to_Index(std::string selected_name)
+{
+    int ret = 1;
+    std::vector<Entity*>* List = Entity_List();
+    for (Entity* Ent : *List)
+    {
+        if ((std::string)Ent->Name == selected_name)
+            ret = Ent->place_number;
+        delete Ent;
+    }
+    delete List;
+    return ret;
+}
 Vector2 CalcAngle(Vector3 pos, Vector3 dst)
 {
     float turnX = static_cast<float>(atan((pos.x - dst.x) / (pos.y - dst.y)) * (180 / 3.14159f));
-    float turnY = static_cast<float>(-atan((pos.z - dst.z) / sqrt(pow(pos.y - dst.y, 2) + pow(pos.x - dst.x, 2))) * (180 / 3.14159f));
+    float turnY = static_cast<float>(-atan((pos.z - dst.z) / sqrt(pow(pos.y - dst.y, 2) + pow(pos.x - dst.x, 2))) * (180 / 3.14159f));/* Rad to Deg */
     turnX = 360 - turnX;
 
     /*Flip*/
@@ -91,8 +103,8 @@ Vector2 CalcAngle(Vector3 pos, Vector3 dst)
         turnX -= 360;
     else if (turnX < 0)
         turnX += 360;
-
-    return { turnX ,turnY };
+   
+    return { turnX ,turnY }; /* Return as a Vector 2 */
 }
 
 void Teleport(DWORD Entity_Base, Vector3 Pos)
@@ -105,21 +117,25 @@ void Thread_Control()
     {
         if (GetKeyState(VK_NUMPAD2) & 0x8000)
         {
+            if (!menu->IsHidden())
             menu->MenuDwn();
             Sleep(170);
         }
         else if (GetKeyState(VK_NUMPAD8) & 0x8000)
         {
+            if (!menu->IsHidden())
             menu->MenuUp();
             Sleep(170);
         }
         else if (GetKeyState(VK_NUMPAD5) & 0x8000)
         {
+            if (!menu->IsHidden())
             menu->Execute();
             Sleep(170);
         }
         else if (GetKeyState(VK_NUMPAD0) & 0x8000)
         {
+            if (!menu->IsHidden())
             menu->BackMenu();
             Sleep(170);
         }
@@ -130,17 +146,29 @@ void Thread_Control()
         }        
         else if (GetKeyState(VK_NUMPAD4) & 0x8000)
         {
+                if(!menu->IsHidden())
                 menu->MenuArrayLeft();
                 Sleep(170);
         }
         else if (GetKeyState(VK_NUMPAD6) & 0x8000)
         {
+            if (!menu->IsHidden())
             menu->MenuArrayRight();
                 Sleep(170);
         }
 
         Sleep(5);
     }
+}
+template <typename T>
+int name_in_array(std::vector<T>arr,T name)
+{
+    for (int i = 0; i < arr.size(); i++)
+    {
+        if (arr.at(i) == name)
+            return i;
+    }
+    return -1;
 }
 void Hack_Thread()
 {
@@ -154,29 +182,41 @@ void Hack_Thread()
         margin = { 0, 0, static_cast<int>(global::Game.size.x), static_cast<int>(global::Game.size.y) };
         global::Game.focused = (GetForegroundWindow() == global::Game.hwnd);
         Player_Inti();
-        std::string N = "";
         std::vector<Entity*>* List = Entity_List();
+        std::vector<std::string>* tracknames = new std::vector<std::string>;
         for (Entity* Ent : *List)
-        {
+        {  
+            global::selected = Name_to_Index(global::selected_name);
+            tracknames->push_back(Ent->Name);//this is getting deleted which because the char* is pointing to the Ent->Name! Big problemo
             
-            for (int i = 0; i < 16; i++)
-                N += Ent->Name[i];
-            global::Entity_Name_List->push_back(N.c_str());
-            N = "";
             if (Ent->place_number == global::selected)
             {
-                /*   Aim Bot   */
+                /*   Aim Bot    */  
                 if (global::AimBot && Ent->Health != 0 && global::player->Health > 0)
                 {
                     if(!(global::player->Position.x == Ent->Position.x && global::player->Position.y == Ent->Position.y && global::player->Position.z == Ent->Position.z))
                     Write<Vector2>(global::player_p + 0x40, Ent->AngleToAimbot);
                 }
-                /*           */
+                /*              */  
             }
             delete Ent;
         }
         delete List;
-        Sleep(1);
+
+        for (int i = 0; i < tracknames->size(); i++) {
+            std::string cname = tracknames->at(i);
+            if (name_in_array<std::string>(*global::Entity_Name_List, cname) == -1) {
+                global::Entity_Name_List->push_back(cname);
+            }
+        }
+        for (int i = 0; i < global::Entity_Name_List->size(); i++) {
+            std::string cname = global::Entity_Name_List->at(i);
+            const int index = name_in_array<std::string>(*tracknames, cname);
+            if (index == -1) {
+                global::Entity_Name_List->erase(global::Entity_Name_List->begin() + index);
+            }
+        }
+        delete tracknames;
     }
 }
 DWORD WINAPI ThreadProc();
@@ -206,7 +246,8 @@ void Thread()
     Sub_Menu* Sub2 = new Sub_Menu("HACKS");
     Sub2->Add_Toggle("ESP", global::Esp);
     Sub2->Add_Toggle("Aimbot", global::AimBot);
-    Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V);delete E;});
+    Sub2->Add_Array(global::Entity_Name_List, "Selected", global::selected_name);
+    Sub2->Add_Action("Teleport", [&] {Entity_Specific* E = new Entity_Specific; Vector3 V;if(E->Get_Pos_Of_S_Ent(global::selected, &V))Teleport(global::player_p, V); delete E;});
     Sub1->Add_Sub_Menu(Sub2);
     Sub1->Add_Action("Quit / Exit", [&] {PostMessage(global::overlay, WM_DESTROY, NULL, NULL); });
     menu = new Menu(Sub1);
@@ -226,19 +267,19 @@ void Thread()
     while (global::THREAD_ON && global::Debug && false)
     {
         
-        std::cout << "Player:\n\t"<<global::player->Name<<"\n\t\tStatus:\n\t\t\tHealth: " << global::player->Health << " / 100\n\t\t\tArmour: " << global::player->Armour << "\n\t\t\tTeam #: " << global::player->Team_Number << "\n\t\t\tPosition:  X: " << global::player->Position.x << ", Y: " << global::player->Position.y << ", Z: " << global::player->Position.z << "\n\t\tWeapon (equipped):\n\t\t\tName: " << global::player->Equipped.weapon_name << "\n\t\t\tAmmo: " << global::player->Equipped.weapon_ammo.loaded << " / " << global::player->Equipped.weapon_ammo.inv << "\n" << std::endl;
+        std::cout << "Player:\n\t"<<global::player->Name<<"\n\t\tStatus:\n\t\t\tHealth: " << global::player->Health << " / 100\n\t\t\tArmour: " << global::player->Armour << "\n\t\t\tTeam #: " << global::player->Team_Number << "\n\t\t\tPosition:  X: " << global::player->Position.x << ", Y: " << global::player->Position.y << ", Z: " << global::player->Position.z << "\n\t\tWeapon (equipped):\n\t\t\tName: " << global::player->Equipped.weapon_name << "\n\t\t\tAmmo: " << global::player->Equipped.weapon_ammo.loaded << " / " << global::player->Equipped.weapon_ammo.inv << "\n" << "\n";
         
-        std::vector<Entity*>* List =  Entity_List();
+       std::vector<Entity*>* List = Entity_List();
         for (Entity* Ent : *List)
         {
-            
             if (global::Show_Info && Ent->place_number == global::selected)
-                std::cout << Ent->Name << "\n\tStatus:\n\t\tHealth: " << Ent->Health << " / 100\n\t\tArmour: " << Ent->Armour << "\n\t\tTeam #: " << Ent->Team_Number << "\n\tPosition:  X: " << Ent->Position.x << ", Y: " << Ent->Position.y << ", Z: " << Ent->Position.z << "\n\tWeapon (equipped):\n\t\tName: " << Ent->Equipped.weapon_name << "\n\t\tAmmo: " << Ent->Equipped.weapon_ammo.loaded << " / " << Ent->Equipped.weapon_ammo.inv << "\n" << std::endl;
+                std::cout << Ent->Name << "\n\tStatus:\n\t\tHealth: " << Ent->Health << " / 100\n\t\tArmour: " << Ent->Armour << "\n\t\tTeam #: " << Ent->Team_Number << "\n\tPosition:  X: " << Ent->Position.x << ", Y: " << Ent->Position.y << ", Z: " << Ent->Position.z << "\n\tWeapon (equipped):\n\t\tName: " << Ent->Equipped.weapon_name << "\n\t\tAmmo: " << Ent->Equipped.weapon_ammo.loaded << " / " << Ent->Equipped.weapon_ammo.inv << "\n" << "\n";
             else
-                std::cout << Ent->Name<< "\n" << std::endl;
+                std::cout << Ent->Name<< "\n" << "\n";
             delete Ent;//Remebmer to delete!!!!! 
         }
         delete List;//Not a vector array
+       
         Sleep(100);
         system("cls");
     }
@@ -324,7 +365,7 @@ DWORD WINAPI ThreadProc() {
             DispatchMessage(&global::msg);
             if (global::msg.message == WM_QUIT)
             {
-                std::cout << "Quit" << std::endl;
+                std::cout << "Quit" << "\n";
                 global::THREAD_ON = false;
                 pFontS->Release();
                 pFontL->Release();

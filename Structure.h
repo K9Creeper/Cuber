@@ -139,7 +139,8 @@ namespace global {
 
     int player_count;//0x10F500
     int selected = 1;
-    std::vector<const char*>* Entity_Name_List = nullptr;
+    std::string selected_name = "";
+    std::vector<std::string>* Entity_Name_List = new std::vector<std::string>;
     bool AimBot;
     bool Esp;
     bool Show_Info = true;
@@ -157,8 +158,9 @@ struct Option {
     std::function<void()> function = NULL;
     Sub_Menu* Sub = nullptr;
     bool* boolean = nullptr;  
-    std::vector<const char*>* Array = nullptr;
+    std::vector<std::string>* Array = nullptr;
     int index_array = 0;
+    std::string tracker = "";
 };
 
 
@@ -219,27 +221,31 @@ public:
         Op->function = Func;
         this->Options->Option_List->push_back(Op);
     }
-    template <typename T>
-    void Add_Array(std::vector<const char*>* value, const char* Array_Name, T& change)
+    void Add_Array(std::vector<std::string>* value, const char* Array_Name, std::string& change)
     {
         Option* Op = new Option;
         Op->option_name = Array_Name;
         Op->option_type = 4;
         Op->Array = value;
-        std::cout << change << std::endl;
         Op->function = [&] {
-            if constexpr (std::is_same_v<const char*, T>) //ONLY const char* can do this.
-                change = this->GetSelectedOption()->Array->at(this->GetSelectedOption()->index_array);
-            else
-            {
-                std::stringstream strValue;
-                strValue << this->GetSelectedOption()->Array->at(this->GetSelectedOption()->index_array);
-                strValue >> change;
+            if (this->GetSelectedOption()->Array == nullptr) {
+                return;
             }
             
+            if (this->GetSelectedOption()->Array->size() == 0) {
+                return;
+            }
+                change = this->GetSelectedOption()->Array->at(this->GetSelectedOption()->index_array);
+                this->GetSelectedOption()->tracker = change;
+         
         };
+        if(value != nullptr)
+        if (value->size() > 0) {
+            change = value->at(Op->index_array);
+            Op->tracker = change;
+        }
+
         this->Options->Option_List->push_back(Op);
-        Op->function();
     }
 };
 class Menu {
@@ -285,9 +291,10 @@ public:
                         name += " OFF";
                 else if (this->Selected->GetOptionsList()->at(i)->option_type == 1)
                     name += "  >";
-                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4 && this->Selected->GetOptionsList()->at(i)->Array != nullptr &&this->Selected->GetOptionsList()->at(i)->Array->size() > 0)
+                else if (this->Selected->GetOptionsList()->at(i)->option_type == 4 && this->Selected->GetOptionsList()->at(i)->Array != nullptr)
                 {
-                    std::string sele = this->Selected->GetOptionsList()->at(i)->Array->at(this->Selected->GetOptionsList()->at(i)->index_array);
+                    std::string sele = this->Selected->GetOptionsList()->at(i)->tracker;
+                    
                     name += "  < ";
                     name += sele + " >";
                 }
@@ -315,7 +322,8 @@ public:
     void MenuArrayRight() {
         if (this->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
         {
-
+            if (this->GetSelectedMenu()->GetSelectedOption()->Array != nullptr)
+                if (this->GetSelectedMenu()->GetSelectedOption()->Array->size() > 0)
             if (this->GetSelectedMenu()->GetSelectedOption()->index_array + 1 >= this->GetSelectedMenu()->GetSelectedOption()->Array->size())
                 this->GetSelectedMenu()->GetSelectedOption()->index_array = 0;
             else
@@ -326,7 +334,8 @@ public:
     void MenuArrayLeft() {
         if (this->GetSelectedMenu()->GetSelectedOption()->option_type == 4)
         {
-
+            if(this->GetSelectedMenu()->GetSelectedOption()->Array != nullptr)
+            if(this->GetSelectedMenu()->GetSelectedOption()->Array->size() > 0)
             if (this->GetSelectedMenu()->GetSelectedOption()->index_array - 1 < 0)
                 this->GetSelectedMenu()->GetSelectedOption()->index_array = this->GetSelectedMenu()->GetSelectedOption()->Array->size() - 1;
             else

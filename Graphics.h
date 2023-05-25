@@ -59,7 +59,7 @@ void RENDER()
 	// clear the window alpha
 	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
 
-	d3ddev->BeginScene();    // begins the 3D scene
+	d3ddev->BeginScene();
 	
 	if (global::Game.focused)
 	{
