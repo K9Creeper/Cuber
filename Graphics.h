@@ -91,27 +91,25 @@ void RENDER()
 					/*
 					DRAW INFO
 					*/
-					std::string s = "Health: "+std::to_string(Ent->Health)+" / 100  Armour: "+std::to_string(Ent->Armour);
+					std::string s = "Health: " + std::to_string(Ent->Health) + " / 100  Armour: " + std::to_string(Ent->Armour);
 					std::string m = "Team #: " + std::to_string(Ent->Team_Number);
 					std::string p = "Position:   X: " + std::to_string(Ent->Position.x) + " Y: " + std::to_string(Ent->Position.y) + " Z: " + std::to_string(Ent->Position.z);
+					std::string w = "Weapon Equiped: " + (std::string)Ent->Equipped.weapon_name + " " + std::to_string(Ent->Equipped.weapon_ammo.loaded) + " / " + std::to_string(Ent->Equipped.weapon_ammo.inv);
+					std::vector<const char*> stuf = { Ent->Name, s.c_str(), m.c_str(), p.c_str(), w.c_str() };
+					auto font = pFontM;
+					int diffs = 14;
 					if (width >= 40)
 					{
-						DrawString(wts.x - (width * 2), wtsl.y+3, D3DCOLOR_ARGB(255, 255, 0, 150), pFontL, Ent->Name);
-						DrawString(wts.x - (width * 2), wtsl.y + 27, D3DCOLOR_ARGB(255, 255, 0, 150), pFontL, s.c_str());
-						DrawString(wts.x - (width * 2), wtsl.y + 51, D3DCOLOR_ARGB(255, 255, 0, 150), pFontL, p.c_str());
+						font = pFontL;
+						diffs = 24;
 					}
 					else if (width <= 15)
 					{
-						DrawString(wts.x - (width * 2), wtsl.y+3, D3DCOLOR_ARGB(255, 255, 0, 150), pFontS, Ent->Name);
-						DrawString(wts.x - (width * 2), wtsl.y + 12, D3DCOLOR_ARGB(255, 255, 0, 150), pFontS, s.c_str());
-						DrawString(wts.x - (width * 2), wtsl.y + 21, D3DCOLOR_ARGB(255, 255, 0, 150), pFontS, p.c_str());
+						font = pFontS;
+						diffs = 9;
 					}
-					else
-					{
-						DrawString(wts.x - (width * 2), wtsl.y+3, D3DCOLOR_ARGB(255, 255, 0, 150), pFontM, Ent->Name);
-						DrawString(wts.x - (width * 2), wtsl.y + 17, D3DCOLOR_ARGB(255, 255, 0, 150), pFontM, s.c_str());
-						DrawString(wts.x - (width * 2), wtsl.y + 31, D3DCOLOR_ARGB(255, 255, 0, 150), pFontM, p.c_str());
-					}
+					for (int i = 0; i < stuf.size(); i++)
+						DrawString(wts.x - (width * 2), wtsl.y + 3 + (diffs*i), D3DCOLOR_ARGB(255, 255, 0, 150), font, stuf.at(i));
 				}
 			}
 				delete Ent;
